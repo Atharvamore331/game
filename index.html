@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Escape Room Prototype</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --accent-color: #e74c3c;
+            --success-color: #2ecc71;
+            --font-family: 'Arial', sans-serif;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: #34495e;
+            color: #ecf0f1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            overflow: hidden;
+            text-align: center;
+        }
+
+        .game-container {
+            width: 90vw;
+            max-width: 800px;
+            background-color: var(--primary-color);
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            padding: 30px;
+            box-sizing: border-box;
+            transition: transform 0.6s ease-in-out;
+        }
+
+        .level-1, .level-2 {
+            display: none;
+        }
+
+        .level-1.active, .level-2.active {
+            display: block;
+        }
+
+        h1 {
+            color: var(--accent-color);
+            margin-bottom: 20px;
+            font-size: 2.5em;
+        }
+
+        p {
+            font-size: 1.2em;
+            margin-bottom: 25px;
+        }
+
+        .door {
+            width: 150px;
+            height: 250px;
+            background-color: #5d5d5d;
+            border-radius: 5px;
+            position: relative;
+            margin: 20px auto;
+            border: 5px solid #444;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
+            transition: transform 1s ease-in-out;
+            transform-origin: left;
+        }
+
+        .door-open {
+            transform: perspective(1000px) rotateY(-110deg);
+        }
+
+        .door:after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            right: 15px;
+            transform: translateY(-50%);
+            width: 20px;
+            height: 40px;
+            background-color: #ccc;
+            border-radius: 5px;
+            border: 2px solid #aaa;
+        }
+
+        .puzzle-input {
+            margin-top: 20px;
+        }
+
+        #math-lock {
+            padding: 10px;
+            font-size: 1.5em;
+            width: 150px;
+            text-align: center;
+            border: 2px solid var(--accent-color);
+            background-color: #34495e;
+            color: #ecf0f1;
+            border-radius: 5px;
+            outline: none;
+        }
+
+        #math-lock:focus {
+            border-color: var(--success-color);
+        }
+
+        .message {
+            margin-top: 15px;
+            font-size: 1.1em;
+            font-weight: bold;
+            height: 20px;
+        }
+
+        .correct-message {
+            color: var(--success-color);
+            animation: fade-in 0.5s forwards;
+        }
+
+        .wrong-message {
+            color: var(--accent-color);
+            animation: fade-in 0.5s forwards;
+        }
+
+        @keyframes fade-in {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* Chemistry Puzzle Drag & Drop */
+        .chemistry-puzzle {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 20px;
+        }
+
+        .drop-zone {
+            display: flex;
+            gap: 10px;
+            padding: 20px;
+            border: 2px dashed #95a5a6;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            min-height: 80px;
+            align-items: center;
+            justify-content: center;
+            background-color: #2c3e50;
+            width: 100%;
+            box-sizing: border-box;
+            transition: border-color 0.3s;
+        }
+
+        .drop-zone.drag-over {
+            border-color: var(--success-color);
+        }
+
+        .drop-zone .atom {
+            pointer-events: none; /* Disable dragging when dropped */
+        }
+
+        .atoms-container {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .atom {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.8em;
+            font-weight: bold;
+            cursor: grab;
+            user-select: none;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            transition: transform 0.2s ease-in-out;
+            position: relative;
+        }
+
+        .atom:active {
+            cursor: grabbing;
+        }
+
+        .atom:nth-child(1) { background-color: #3498db; } /* Hydrogen */
+        .atom:nth-child(2) { background-color: #3498db; } /* Hydrogen */
+        .atom:nth-child(3) { background-color: #e74c3c; } /* Oxygen */
+
+        .final-message {
+            font-size: 2em;
+            color: var(--success-color);
+            text-shadow: 0 0 10px rgba(46, 204, 113, 0.8);
+            margin-top: 30px;
+            animation: bounce 1s infinite alternate;
+        }
+
+        @keyframes bounce {
+            from { transform: translateY(0); }
+            to { transform: translateY(-10px); }
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+
+<div class="game-container">
+    <div id="level-1" class="level-1 active">
+        <h1>Escape Room: Level 1</h1>
+        <p>A sign reads: "The correct code is a prime number that is also the last two digits of the current year. (Hint: The year is 2057)"</p>
+        <div class="puzzle-input">
+            <input type="number" id="math-lock" placeholder="Enter code">
+            <div id="message-1" class="message"></div>
+        </div>
+        <div class="door" id="door-1"></div>
+    </div>
+
+    <div id="level-2" class="level-2">
+        <h1>Escape Room: Level 2</h1>
+        <p>A sign says: "Combine the elements to create a water molecule."</p>
+        <div class="chemistry-puzzle">
+            <div class="drop-zone" id="drop-zone-2"></div>
+            <div class="atoms-container" id="atoms-container">
+                <div class="atom" draggable="true" data-atom="H">H</div>
+                <div class="atom" draggable="true" data-atom="H">H</div>
+                <div class="atom" draggable="true" data-atom="O">O</div>
+            </div>
+        </div>
+        <div class="door" id="door-2"></div>
+        <div id="message-2" class="message"></div>
+    </div>
+
+    <div id="final-screen" class="hidden">
+        <h1 class="final-message">🎉 You Escaped! 🎉</h1>
+        <p>You have successfully completed the prototype. Thank you for playing!</p>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const level1 = document.getElementById('level-1');
+        const level2 = document.getElementById('level-2');
+        const finalScreen = document.getElementById('final-screen');
+
+        // --- Level 1 Logic (Math Lock) ---
+        const mathLockInput = document.getElementById('math-lock');
+        const message1 = document.getElementById('message-1');
+        const door1 = document.getElementById('door-1');
+        const correctCode = 57;
+
+        mathLockInput.addEventListener('input', (e) => {
+            const enteredCode = parseInt(e.target.value);
+            if (e.target.value.length === 2 && enteredCode === correctCode) {
+                message1.textContent = 'Correct! The door is unlocking...';
+                message1.className = 'message correct-message';
+                door1.classList.add('door-open');
+                setTimeout(() => {
+                    level1.classList.remove('active');
+                    level2.classList.add('active');
+                }, 1500); // Wait for door animation to finish
+            } else if (e.target.value.length === 2) {
+                message1.textContent = 'Incorrect code. Try again.';
+                message1.className = 'message wrong-message';
+            } else {
+                message1.textContent = '';
+            }
+        });
+
+        // --- Level 2 Logic (Chemistry Puzzle) ---
+        const dropZone = document.getElementById('drop-zone-2');
+        const atomsContainer = document.getElementById('atoms-container');
+        const atoms = document.querySelectorAll('.atom');
+        const message2 = document.getElementById('message-2');
+        const door2 = document.getElementById('door-2');
+
+        let droppedAtoms = [];
+
+        atoms.forEach(atom => {
+            atom.addEventListener('dragstart', (e) => {
+                e.dataTransfer.setData('text/plain', e.target.dataset.atom);
+            });
+        });
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('drag-over');
+        });
+
+        dropZone.addEventListener('dragleave', (e) => {
+            dropZone.classList.remove('drag-over');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+            
+            const atomData = e.dataTransfer.getData('text/plain');
+            const draggedAtom = document.querySelector(.atom[data-atom="${atomData}"]:not(.dropped));
+
+            if (draggedAtom && droppedAtoms.length < 3) {
+                draggedAtom.classList.add('dropped');
+                draggedAtom.style.position = 'static';
+                dropZone.appendChild(draggedAtom);
+                droppedAtoms.push(draggedAtom.dataset.atom);
+            }
+
+            // Check for the correct combination (H, H, O in any order)
+            if (droppedAtoms.length === 3) {
+                const sortedAtoms = droppedAtoms.sort();
+                if (sortedAtoms[0] === 'H' && sortedAtoms[1] === 'H' && sortedAtoms[2] === 'O') {
+                    message2.textContent = 'Success! You made H₂O. The final door is opening...';
+                    message2.className = 'message correct-message';
+                    door2.classList.add('door-open');
+                    setTimeout(() => {
+                        level2.classList.remove('active');
+                        finalScreen.classList.remove('hidden');
+                    }, 1500);
+                } else {
+                    message2.textContent = 'Incorrect combination. Try again.';
+                    message2.className = 'message wrong-message';
+                    // Reset puzzle after a short delay
+                    setTimeout(() => {
+                        droppedAtoms = [];
+                        atomsContainer.appendChild(document.querySelector('.atom.dropped[data-atom="H"]'));
+                        atomsContainer.appendChild(document.querySelector('.atom.dropped[data-atom="H"]'));
+                        atomsContainer.appendChild(document.querySelector('.atom.dropped[data-atom="O"]'));
+                        atoms.forEach(atom => atom.classList.remove('dropped'));
+                        message2.textContent = '';
+                    }, 1000);
+                }
+            }
+        });
+    });
+</script>
+
+</body>
+</html>
